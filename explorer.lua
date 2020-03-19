@@ -142,16 +142,16 @@ function drawList(typeList) --draws the current List
             elseif i == 2 then
                 if size[1] == 1 then
                     explorer.setCursorPos(categorys*i+3-categorys, 2)
-                    explorer.write(string.sub("size(by)", 1, categorys-2))
+                    explorer.write(string.sub("size(B )", 1, categorys-2))
                 elseif size[1] == 1000 then
                     explorer.setCursorPos(categorys*i+3-categorys, 2)
-                    explorer.write(string.sub("size(kb)", 1, categorys-2))
+                    explorer.write(string.sub("size(KB)", 1, categorys-2))
                 elseif size[1] == 1000000 then
                     explorer.setCursorPos(categorys*i+3-categorys, 2)
-                    explorer.write(string.sub("size(mb)", 1, categorys-2))
+                    explorer.write(string.sub("size(MB)", 1, categorys-2))
                 elseif size[1] == 1000000000000 then
                     explorer.setCursorPos(categorys*i+3-categorys, 2)
-                    explorer.write(string.sub("size(gb)", 1, categorys-2))
+                    explorer.write(string.sub("size(GB)", 1, categorys-2))
                 end
             elseif i == 3 then
                 explorer.setCursorPos(categorys*i+3-categorys-2, 2)
@@ -220,7 +220,7 @@ function drawList(typeList) --draws the current List
         explorer.write("- used")
 
         explorer.setCursorPos(categorys*4-6, 8)
-        explorer.write("Direktory")
+        explorer.write("Directory")
         explorer.setCursorPos(categorys*4-#tostring(dirsCount)-3, 9)
         explorer.write(dirsCount .. " dirs")
         explorer.setCursorPos(categorys*4-#tostring(filesCount)-3, 10)
