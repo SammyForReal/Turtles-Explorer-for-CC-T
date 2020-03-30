@@ -69,7 +69,7 @@ function input() --Processe's the entries
                     scroll = scroll - 1
                 end
 
-                drawList("lastItem")
+                drawList("complete")
             elseif key == keys.down and cursorPos < #items then --Select's the next item
                 updateList()
                 
@@ -81,7 +81,7 @@ function input() --Processe's the entries
                     scroll = scroll + 1
                 end
 
-                drawList("lastItem")
+                drawList("complete")
             elseif key == keys.enter then--Select's the element.
             --If it is an order, he goes inside.
             --If it is a file, he asks how the user wants to execute it.
