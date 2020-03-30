@@ -12,7 +12,7 @@ Features
 Currently you can only go to folders and start/edit files.
 You also have some information about the hard disk and the system, which is listed on the right.
 But it will get many patches.
-![Example](https://drive.google.com/uc?id=1TWseyXrc0AYlHU_-EEQcMgilbYMav1ET "Screenshot of Turtles Explorer")
+![Alt Text](https://drive.google.com/uc?id=1TWseyXrc0AYlHU_-EEQcMgilbYMav1ET "Screenshot of Turtles Explorer")
 
 Download
 --------
