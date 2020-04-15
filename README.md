@@ -24,7 +24,7 @@ but if you doesn't have access to this folder, then enter this in **the Interact
 to download it directly on your CraftOS:
 
 ```domain = "raw.github.com/1Turtle/Turtles-Explorer-for-CC-T/NotReady/explorer-<VERSION>.lua"
-content = http.get().readAll()
+content = http.get( <Github RAW link> ).readAll()
 f = fs.open("<name>.lua", "w")
 f.write(content)
 f.close()```
