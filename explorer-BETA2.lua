@@ -1,4 +1,5 @@
 --Version BETA/04/15/20
+--Typos fixed 04/14/20(~14:30) by LeMoonStar
 --Colors ([1/3]=bg; [2/4]=fg)
 selectedItem = { colors.gray, colors.white, colors.cyan, colors.white }
 normalItem = { colors.black, colors.cyan }
@@ -21,11 +22,11 @@ w, h = term.getSize() --Screen size
 categorys = (w-4)/4 --Divide's the line by 5 for the categorie's
 activeinfos = { {keys.f1, "Help"}, {keys.f5, "Reload"}, {keys.f6, "Sort"}, {keys.f9, "Size"}, {"arrowsV", "Scroll"} } --info keys
 
-help = "With this Explorer you can browse, edit or run your files much easier.\nIf you are not yet familiar with the Explorer, we recommend that you read this guide.\nWhen you are finished, press CTRL+C to close the window.\n\nUse the arrow keys to scroll.\n\nThe buttons on the bottom perform the action shown next to them.\n\nto use the tools listed on the top, press CTRL+<first letter>."
+help = "With this Explorer you can browse, edit and run your files much easier.\nIf you are not yet familiar with the Explorer, we recommend that you read this guide.\nWhen you are finished, press CTRL+C to close the window.\n\nUse the arrow keys to scroll.\n\nThe keys at the bottom perform the action shown next to them.\n\nTo use the tools listed above, press CTRL+<First Letter>."
 
 currentDialog = 0
-dialogs = {
-    { "Open with", "How do you want to execute the   file {0}?", {"Cancel", "See Code", "Execute"}, {} },
+dialogs = {                                                   |
+    { "Open with", "what do you want to do with the  file {0}?", {"Cancel", "See Code", "Execute"}, {} },
     { "Reload", "Update GUI..", {}, {} },
     { "Help", "the help dialog was opened            in a new window.", {"Cancel"}, {} }
 }
@@ -533,7 +534,7 @@ function drawList(typeList) --draws the current List
         explorer.write("- used") --Placeholder for the used memory
 
         explorer.setCursorPos(categorys*4-6, 8)
-        explorer.write("Direktory") --Next column
+        explorer.write("Directory") --Next column
         explorer.setCursorPos(categorys*4-#tostring(dirsCount)-3, 9)
         explorer.write(dirsCount .. " dirs") --Number of the directorys in the current path
         explorer.setCursorPos(categorys*4-#tostring(filesCount)-3, 10)
