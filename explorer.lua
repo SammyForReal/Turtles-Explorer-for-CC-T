@@ -1,4 +1,3 @@
---Version BETA/04/15/20
 --Typos fixed 04/14/20(~14:30) by LeMoonStar
 --Colors ([1/3]=bg; [2/4]=fg)
 selectedItem = { colors.gray, colors.white, colors.cyan, colors.white }
