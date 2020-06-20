@@ -23,41 +23,6 @@ local wSys, hSys = sysInfos.getSize()
 local Nformat = { byte=1, kb=0.001, mb=0.000001, gb=0.000000001 }
 local numberSize = Nformat.kb
 
---Functions
-local function updateList() --Searches for files/directories in the current path and sorts them
-    foundItems = fs.list(path) --Found items
-    items = { }
-    items[1] = { "dir", "..", ">" } --Jump one file back
-
-    for i=1,#foundItems,1 do --Goes through the list and copys them in the item list
-        if fs.isDir(path .. foundItems[i]) then
-            items[#items+1] = { "dir", foundItems[i], "-" }
-        else
-            items[#items+1] = { "file", foundItems[i], "-" }
-        end
-    end
-end
-
-local function itemListHandler(action) --Handles the item list
-    if action == -1 then --Scroll down
-        items[cursor.pos][3] = "-"
-        cursor.pos = cursor.pos-1
-        items[cursor.pos][3] = ">"
-
-        if cursor.pos-cursor.scroll < 2 and cursor.scroll > 0 then
-            cursor.scroll = cursor.scroll - 1
-        end
-    elseif action == 1 then --Scroll up
-        items[cursor.pos][3] = "-"
-        cursor.pos = cursor.pos+1
-        items[cursor.pos][3] = ">"
-
-        if cursor.pos-cursor.scroll > h-5 then
-            cursor.scroll = cursor.scroll + 1
-        end
-    end
-end
-
 local function round(num)
     numR = num + 0.5 - (num + 0.5) % 1
     if numR == 0 then
@@ -112,7 +77,7 @@ local function sysInfosGUI(variable)
     end
 
     --Path
-    if variable == "all" then 
+    if variable == "path" or variable == "all" then 
         term.setCursorPos(1,2)
         term.setBackgroundColor(normalItem[1])
         term.setTextColor(normalItem[2])
@@ -182,6 +147,65 @@ local function sysInfosGUI(variable)
     end
 end
 
+--Functions
+local function updateList() --Searches for files/directories in the current path and sorts them
+    foundItems = fs.list(path) --Found items
+    items = { }
+    items[1] = { "dir", "..", ">" } --Jump one file back
+
+    for i=1,#foundItems,1 do --Goes through the list and copys them in the item list
+        if fs.isDir(path .. foundItems[i]) then
+            items[#items+1] = { "dir", foundItems[i], "-" }
+        else
+            items[#items+1] = { "file", foundItems[i], "-" }
+        end
+    end
+end
+
+local function itemListHandler(action) --Handles the item list
+    if action == -1 then --Scroll down
+        items[cursor.pos][3] = "-"
+        cursor.pos = cursor.pos-1
+        items[cursor.pos][3] = ">"
+
+        if cursor.pos-cursor.scroll < 2 and cursor.scroll > 0 then
+            cursor.scroll = cursor.scroll - 1
+        end
+    elseif action == 1 then --Scroll up
+        items[cursor.pos][3] = "-"
+        cursor.pos = cursor.pos+1
+        items[cursor.pos][3] = ">"
+
+        if cursor.pos-cursor.scroll > h-5 then
+            cursor.scroll = cursor.scroll + 1
+        end
+    elseif action == 2 then --Enter Folder / run program
+        if items[cursor.pos][2] == ".." then --Goes one folder further back
+            for i=1,#path,1 do
+                if string.sub(path, #path-i, -i-1) == "/" or string.sub(path, #path-i, -i-1) == "" then
+                    path = string.sub(path, 1, -i-1)
+                    cursor.pos = 1
+                    cursor.scroll = 0
+                    w, h = term.getSize()
+                    break
+                end
+            end
+            updateList()
+            sysInfosGUI("path")
+        elseif items[cursor.pos][1] == "dir" then --Goes into the folder
+            path = path .. items[cursor.pos][2] .. "/"
+            cursor.pos = 1
+            cursor.scroll = 0
+            w, h = term.getSize()
+            updateList()
+            sysInfosGUI("path")
+        else --Run's the File
+            shell.run("fg " .. path .. items[cursor.pos][2])
+            w, h = term.getSize()
+        end
+    end
+end
+
 --Inputs
 local function keyUserInterface() 
     while true do
@@ -195,6 +219,8 @@ local function keyUserInterface()
                 itemListHandler(1)
             elseif key == keys.up and cursor.pos > 1 then
                 itemListHandler(-1)
+            elseif key == keys.enter then--Select's the element.
+                itemListHandler(2)
             end
             itemListGUI()
         end
