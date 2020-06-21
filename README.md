@@ -10,7 +10,7 @@ Features
 --------
 Currently you can only open folders and execute/edit files.  
 You also have some information about the hard disk and the system, which are listed on the right side.  
-trods that it has few features so far, there will be many patches and therefore new features.
+despite that it has few features so far, there will be many patches and therefore new features.
 ![Alt Text](/example.png "Screenshot of Turtles Explorer")
 
 Download
