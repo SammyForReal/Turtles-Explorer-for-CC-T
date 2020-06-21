@@ -8,6 +8,8 @@ local normalItem = { colors.black, colors.cyan }
 --Variables
 local currentTime = textutils.formatTime(os.time())
 local path = "/rom/programs/"   --Current path
+local date = { created=1,modification=2 }
+local dateType = date.created
 local cursor = { scroll=0, pos=1, posX=1, posY=1,click=0 } --click] = {0=false, 1=left, 2=right}
 local items = { } --Current items ([1]=type;[2]=name;[3]=state)
 local w, h = term.getSize() --Screen size
@@ -20,6 +22,7 @@ local selectedWindow = explorer --Focused window.
 --Sizes
 local xExp, yExp = explorer.getSize()
 local wSys, hSys = sysInfos.getSize()
+local category = { file=3, ext=13, size=(xExp-10)/3+11, date=(xExp-10)/3*2+11, info=w-wSys+2 }
 local Nformat = { byte=1, kb=0.001, mb=0.000001, gb=0.000000001 }
 local numberSize = Nformat.kb
 
@@ -32,37 +35,57 @@ local function round(num)
 end
 
 --GUI
-local function printf(form, string, x, y)
+local function printf(form, string, x, y, short)
     form.setCursorPos(x,y)
     form.write(string)
 end
 
 local function itemListGUI()
-    xExp, yExp = explorer.getSize()
-
-    --Clear
-    explorer.setBackgroundColor(normalItem[1])
-    explorer.clear()
-    explorer.setCursorPos(1,1)
-
     local border = h-4
     if (h-4)+cursor.scroll > #items then
         border = #items-cursor.scroll
+
+        --Clear list
+        explorer.setBackgroundColor(normalItem[1])
+        explorer.clear()
+        explorer.setCursorPos(1,1)
     end
 
     for i=1,border,1 do --Draws the list
         explorer.setBackgroundColor(normalItem[1])
         explorer.setTextColor(normalItem[2])
-        explorer.setCursorPos(3,i)
-
         if items[i+cursor.scroll][3] == ">" then --Marks the item
             explorer.setBackgroundColor(selectedItem[1])
             explorer.setTextColor(selectedItem[2])
-            explorer.clearLine()
         end
 
+        explorer.setCursorPos(3,i)
+        explorer.clearLine()
+
         local name = items[i+cursor.scroll][2]
-        explorer.write(name)
+        local ext = "-"
+        local date = "-"
+        local size = "DIR"
+        if items[i+cursor.scroll][1] == "file" then
+            if dateType == 1 then
+                date = os.date("*t", items[i+cursor.scroll][4].created/1000)
+            else
+                date = os.date("*t", items[i+cursor.scroll][4].modification/1000)
+            end
+            date = date.month .. "/" .. date.day .. "/" .. date.year
+
+            size = round(items[i+cursor.scroll][4].size*numberSize)
+        end
+        
+        if items[i+cursor.scroll][1] == "file" then
+            ext = string.sub(name, string.find(name, ".", -4)+1)
+            name = string.sub(name, 1,string.find(name, ".", -4)-1)
+        end
+
+        printf(explorer, name, 3,i, true)
+        printf(explorer, ext, category.ext,i)
+        printf(explorer, size, category.size,i)
+        printf(explorer, date, category.date,i)
     end
 end
 
@@ -92,11 +115,11 @@ local function sysInfosGUI(variable)
         term.setTextColor(sysColor[2])
         term.clearLine()
         
-        printf(term, "filename", 3,3)
-        printf(term, "ext", 13,3)
-        printf(term, "size", 17,3)
-        printf(term, "date", 22,3)
-        printf(term, "sys/disk infos", w-wSys+2,3)
+        printf(term, "filename", category.file,3)
+        printf(term, "ext", category.ext,3)
+        printf(term, "size", category.size,3)
+        printf(term, "date", category.date,3)
+        printf(term, "sys/disk infos", category.info,3)
 
     end
 
@@ -116,8 +139,8 @@ local function sysInfosGUI(variable)
         sysInfos.setTextColor(normalItem[2])
 
         printf(sysInfos, "Disk-space", wSys-13,1)
-        printf(sysInfos, "Direktory", wSys-12,6)
-        printf(sysInfos, "Config's", wSys-11,10)
+        printf(sysInfos, "Directory", wSys-12,6)
+        printf(sysInfos, "Configs", wSys-11,10)
     end
 
     sysInfos.setBackgroundColor(variables[1])
@@ -136,13 +159,18 @@ local function sysInfosGUI(variable)
 
     --Infos
     if variable == "infos" or variable == "all" then
-        currentTime = textutils.formatTime(os.time())
+        local dateT = "?"
+        if dateType == 1 then dateT = "creation"
+        else dateT = "modified" end
+        printf(sysInfos, dateT.." date", wSys-7-#dateT,11)
+
         local sizeSt = "BYTE"
         if numberSize == 0.001 then sizeSt = "KB"
         elseif numberSize == 0.000001 then sizeSt = "MB"
         elseif numberSize == 0.000000001 then sizeSt = "GB" end
-
         printf(sysInfos, "size: "..sizeSt, wSys-8-#sizeSt,12)
+        
+        currentTime = textutils.formatTime(os.time())
         printf(sysInfos, currentTime, wSys-2-#currentTime,13)
     end
 end
@@ -155,11 +183,14 @@ local function updateList() --Searches for files/directories in the current path
 
     for i=1,#foundItems,1 do --Goes through the list and copys them in the item list
         if fs.isDir(path .. foundItems[i]) then
-            items[#items+1] = { "dir", foundItems[i], "-" }
+            items[#items+1] = { "dir", foundItems[i], "-", nil }
         else
-            items[#items+1] = { "file", foundItems[i], "-" }
+            items[#items+1] = { "file", foundItems[i], "-", fs.attributes(path .. foundItems[i]) }
         end
     end
+    cursor.pos = 1
+    cursor.scroll = 0
+    sysInfosGUI("path")
 end
 
 local function itemListHandler(action) --Handles the item list
@@ -184,24 +215,15 @@ local function itemListHandler(action) --Handles the item list
             for i=1,#path,1 do
                 if string.sub(path, #path-i, -i-1) == "/" or string.sub(path, #path-i, -i-1) == "" then
                     path = string.sub(path, 1, -i-1)
-                    cursor.pos = 1
-                    cursor.scroll = 0
-                    w, h = term.getSize()
                     break
                 end
             end
             updateList()
-            sysInfosGUI("path")
         elseif items[cursor.pos][1] == "dir" then --Goes into the folder
             path = path .. items[cursor.pos][2] .. "/"
-            cursor.pos = 1
-            cursor.scroll = 0
-            w, h = term.getSize()
             updateList()
-            sysInfosGUI("path")
         else --Run's the File
             shell.run("fg " .. path .. items[cursor.pos][2])
-            w, h = term.getSize()
         end
     end
 end
