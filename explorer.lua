@@ -23,7 +23,7 @@ local selectedWindow = explorer --Focused window.
 --Sizes
 local xExp, yExp = explorer.getSize()
 local wSys, hSys = sysInfos.getSize()
-local category = { file=3, ext=12+(w/26), size=(xExp-18)/3+10, date=(xExp-10)/3*2+10, info=w-wSys+2 }
+local category = { file=3, ext=12, size=(xExp-18)/3+13, date=(xExp-10)/3*2+10, info=w-wSys+2 }
 local Nformat = { byte=1, kb=0.001, mb=0.000001, gb=0.000000001 }
 local numberSize = Nformat.kb
 
