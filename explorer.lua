@@ -6,6 +6,7 @@ local selectedItem = { colors.gray, colors.white }
 local normalItem = { colors.black, colors.cyan }
 
 --Variables
+local fileTypes = {["lua"]=colors.blue, ["txt"]=colors.white, ["nfp"]=colors.orange, [" ?"]=colors.lightGray, [" -"]=colors.gray, ["DIR"]=colors.purple }
 local currentTime = textutils.formatTime(os.time())
 local path = "/rom/programs/"   --Current path
 local date = { created=1,modification=2 }
@@ -16,13 +17,13 @@ local w, h = term.getSize() --Screen size
 
 --Windows
 local explorer = window.create(term.current(), 1, 4, w-16, h-4, true) --Item List
-local sysInfos = window.create(term.current(), w-15, 4, w-34, h-4, true) --System Informations
+local sysInfos = window.create(term.current(), w-15, 4, 17, h-4, true) --System Informations
 local selectedWindow = explorer --Focused window.
 
 --Sizes
 local xExp, yExp = explorer.getSize()
 local wSys, hSys = sysInfos.getSize()
-local category = { file=3, ext=13, size=(xExp-10)/3+11, date=(xExp-10)/3*2+11, info=w-wSys+2 }
+local category = { file=3, ext=12+(w/26), size=(xExp-18)/3+10, date=(xExp-10)/3*2+10, info=w-wSys+2 }
 local Nformat = { byte=1, kb=0.001, mb=0.000001, gb=0.000000001 }
 local numberSize = Nformat.kb
 
@@ -35,9 +36,19 @@ local function round(num)
 end
 
 --GUI
-local function printf(form, string, x, y, short)
+local function printf(form, stringT, x, y, short)
+    if not (short == nil) then --Shortens the string
+        if #stringT > short then
+            local removeChars = 2
+            if (#string.sub(stringT, short-2)-1) > 10 then
+                removeChars = 3
+            end
+            stringT = string.sub(stringT, 1, short-removeChars) .. "~" .. #string.sub(stringT, short-2)-1
+        end
+    end
+
     form.setCursorPos(x,y)
-    form.write(string)
+    form.write(stringT)
 end
 
 local function itemListGUI()
@@ -52,40 +63,41 @@ local function itemListGUI()
     end
 
     for i=1,border,1 do --Draws the list
-        explorer.setBackgroundColor(normalItem[1])
-        explorer.setTextColor(normalItem[2])
+        local customColor = true
         if items[i+cursor.scroll][3] == ">" then --Marks the item
+            customColor = false
             explorer.setBackgroundColor(selectedItem[1])
             explorer.setTextColor(selectedItem[2])
+        else
+            explorer.setBackgroundColor(normalItem[1])
+            explorer.setTextColor(normalItem[2])
         end
 
         explorer.setCursorPos(3,i)
         explorer.clearLine()
 
-        local name = items[i+cursor.scroll][2]
-        local ext = "-"
-        local date = "-"
-        local size = "DIR"
-        if items[i+cursor.scroll][1] == "file" then
-            if dateType == 1 then
-                date = os.date("*t", items[i+cursor.scroll][4].created/1000)
-            else
-                date = os.date("*t", items[i+cursor.scroll][4].modification/1000)
-            end
-            date = date.month .. "/" .. date.day .. "/" .. date.year
+        --Name
+        printf(explorer, items[i+cursor.scroll][2], 3,i, category.ext-category.file-1)
 
-            size = round(items[i+cursor.scroll][4].size*numberSize)
+        --File type
+        if customColor and not (fileTypes[items[i+cursor.scroll][4][1]] == nil) then
+            explorer.setTextColor(fileTypes[items[i+cursor.scroll][4][1]])
         end
+        printf(explorer, items[i+cursor.scroll][4][1], category.ext,i)
+        if customColor then explorer.setTextColor(normalItem[2]) else explorer.setTextColor(selectedItem[2]) end
+
+        --Size
+        if customColor and items[i+cursor.scroll][4][2] == "DIR" then
+            explorer.setTextColor(fileTypes["DIR"])
+        end
+        printf(explorer, items[i+cursor.scroll][4][2], category.size,i)
+        if customColor then explorer.setTextColor(normalItem[2]) else explorer.setTextColor(selectedItem[2]) end
         
-        if items[i+cursor.scroll][1] == "file" then
-            ext = string.sub(name, string.find(name, ".", -4)+1)
-            name = string.sub(name, 1,string.find(name, ".", -4)-1)
+        --Date
+        if customColor and items[i+cursor.scroll][4][3] == "--/--/----" then
+            explorer.setTextColor(fileTypes[" -"])
         end
-
-        printf(explorer, name, 3,i, true)
-        printf(explorer, ext, category.ext,i)
-        printf(explorer, size, category.size,i)
-        printf(explorer, date, category.date,i)
+        printf(explorer, items[i+cursor.scroll][4][3], category.date,i)
     end
 end
 
@@ -101,18 +113,18 @@ local function sysInfosGUI(variable)
 
     --Path
     if variable == "path" or variable == "all" then 
-        term.setCursorPos(1,2)
         term.setBackgroundColor(normalItem[1])
         term.setTextColor(normalItem[2])
+        term.setCursorPos(1,2)
         term.clearLine()
         term.write(path)
     end
 
     --Category
     if variable == "all" then
-        term.setCursorPos(1,3)
         term.setBackgroundColor(sysColor[1])
         term.setTextColor(sysColor[2])
+        term.setCursorPos(1,3)
         term.clearLine()
         
         printf(term, "filename", category.file,3)
@@ -126,7 +138,7 @@ local function sysInfosGUI(variable)
     --Headers
     if variable == "headers" or variable == "all" then 
         
-        for i=1,wSys-3,1 do
+        for i=1,wSys-3,1 do --Border
             sysInfos.setBackgroundColor(borders[1])
             sysInfos.setTextColor(borders[2])
 
@@ -159,18 +171,20 @@ local function sysInfosGUI(variable)
 
     --Infos
     if variable == "infos" or variable == "all" then
+        --Date status
         local dateT = "?"
         if dateType == 1 then dateT = "creation"
         else dateT = "modified" end
         printf(sysInfos, dateT.." date", wSys-7-#dateT,11)
 
+        --Size status
         local sizeSt = "BYTE"
         if numberSize == 0.001 then sizeSt = "KB"
         elseif numberSize == 0.000001 then sizeSt = "MB"
         elseif numberSize == 0.000000001 then sizeSt = "GB" end
         printf(sysInfos, "size: "..sizeSt, wSys-8-#sizeSt,12)
         
-        currentTime = textutils.formatTime(os.time())
+        --Time
         printf(sysInfos, currentTime, wSys-2-#currentTime,13)
     end
 end
@@ -179,13 +193,34 @@ end
 local function updateList() --Searches for files/directories in the current path and sorts them
     foundItems = fs.list(path) --Found items
     items = { }
-    items[1] = { "dir", "..", ">" } --Jump one file back
+    items[1] = { "dir", "..", ">", {" -", "DIR", "--/--/----"} } --Jump one file back
 
     for i=1,#foundItems,1 do --Goes through the list and copys them in the item list
-        if fs.isDir(path .. foundItems[i]) then
-            items[#items+1] = { "dir", foundItems[i], "-", nil }
-        else
-            items[#items+1] = { "file", foundItems[i], "-", fs.attributes(path .. foundItems[i]) }
+        local attributes = nil
+        local name = foundItems[i]
+        local ext = " ?"
+        local size = "DIR"
+        local date = "--/--/----"
+
+        if fs.isDir(path .. foundItems[i]) then --DIR
+            items[#items+1] = { "dir", foundItems[i], "-", {" -", size, date} }
+        else --FILE
+            --Date
+            attributes = fs.attributes(path .. foundItems[i])
+            if dateType == 1 then date = os.date("*t", attributes.created/1000)
+            else date = os.date("*t", attributes.modification/1000) end
+            date = date.month .. "/" .. date.day .. "/" .. date.year
+            
+            --Size
+            size = round(attributes.size*numberSize)
+            if string.sub(name, 1, 1) == "." then --"invisible" file
+                name = string.sub(name, 2)
+            else --Normal file
+                ext = string.sub(name, string.find(name, ".", -4)+1)
+                name = string.sub(name, 1,string.find(name, ".", -4)-1)
+            end
+
+            items[#items+1] = { "file", name, "-", {ext, size, date} }
         end
     end
     cursor.pos = 1
@@ -237,16 +272,15 @@ local function keyUserInterface()
             listEnd = yExp-1
             if #items < yExp-2 then listEnd = #items end
             
-            if key == keys.down and cursor.pos < #items then
+            if key == keys.down and cursor.pos < #items then --Move down
                 itemListHandler(1)
-            elseif key == keys.up and cursor.pos > 1 then
+            elseif key == keys.up and cursor.pos > 1 then --Move up
                 itemListHandler(-1)
-            elseif key == keys.enter then--Select's the element.
+            elseif key == keys.enter then --Select's the element.
                 itemListHandler(2)
             end
             itemListGUI()
         end
-        sleep()
     end
 end
 
@@ -256,6 +290,7 @@ function main()
     sysInfosGUI("all")
     while true do
         if not(textutils.formatTime(os.time()) == currentTime) then
+            currentTime = textutils.formatTime(os.time())
             sysInfosGUI("infos")
         end
         sleep()
