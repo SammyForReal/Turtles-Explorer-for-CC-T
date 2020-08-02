@@ -1,7 +1,3 @@
----------------------------------------------------------------
--- Copyright Junue 23 2020, Sammy Koch, All rights reserved. --
----------------------------------------------------------------
-
 --Colors ([1/3]=bg; [2/4]=fg)
 local sysColor = { colors.cyan, colors.white }
 local borders = { colors.black, colors.gray }
@@ -18,6 +14,7 @@ local cursor = { scroll=0, pos=1, posX=1, posY=1,click=0,status=0,marked=0 } --c
 local items = { } --Current items ([1]=type;[2]=name;[3]=state)
 local keys_down = {} --Keys which are held
 local w, h = term.getSize() --Screen size
+local sort = { 0, 0 } --[0=found order, 1=big, 2=small]=size; [0=none, 1=files, 2=folders, 3=type]=first type;
 
 --Windows
 local explorer = window.create(term.current(), 1, 4, w-16, h-4, true) --Item List
@@ -34,6 +31,7 @@ local numberSize = Nformat.kb
 local date = { created=1,modification=2 }
 local dateType = date.created
 
+--Math
 local function round(num) --Rounds numbers up or down
     numR = num + 0.5 - (num + 0.5) % 1
     if numR == 0 then
@@ -122,11 +120,37 @@ local function sysInfosGUI(variable) --All informations
 
     --Path
     if variable == "path" or variable == "all" then 
+        local label = os.getComputerLabel()
         term.setBackgroundColor(normalItem[1])
         term.setTextColor(normalItem[2])
         term.setCursorPos(1,2)
         term.clearLine()
-        term.write("/" .. path)
+
+        --Current Path
+        if not(label == nil) then
+            if #path+2 >= w-#label-5 then
+                printf(term, "/" .. string.sub(path, 1, w-#label-10) .. ".../", 1, 2)
+            else
+                printf(term, "/" .. path, 1, 2)
+            end
+
+            term.setCursorPos(w-#label-3, 2)
+
+            term.setTextColor(colors.yellow)
+            term.write("[")
+            
+            term.setTextColor(colors.white)
+            term.write(label)
+
+            term.setTextColor(colors.yellow)
+            term.write("]")
+
+            term.setCursorPos(2+#path,2)
+        elseif #path+2 >= w-5 then
+            printf(term, "/" .. string.sub(path, 1, w-8) .. ".../", 1, 2)           
+        else
+            printf(term, "/" .. path, 1, 2)
+        end
 
         if cursor.status == 0 then
             term.setTextColor(colors.gray)
@@ -177,16 +201,34 @@ local function sysInfosGUI(variable) --All informations
 
     --Values
     if variable == "values" or variable == "all" then 
-        free = tostring( round(fs.getFreeSpace("/")*numberSize) )
-        used = tostring( round((fs.getCapacity("/")-fs.getFreeSpace("/"))*numberSize) )
-        total = tostring( round(fs.getCapacity("/")*numberSize) )
+        --Disk-space
+        local free = tostring( round(fs.getFreeSpace("/")*numberSize) )
+        local used = tostring( round((fs.getCapacity("/")-fs.getFreeSpace("/"))*numberSize) )
+        local total = tostring( round(fs.getCapacity("/")*numberSize) )
 
         printf(sysInfos, free.." avail", wSys-#free-8,2)
         printf(sysInfos, used.." used ", wSys-#used-8,3)
         printf(sysInfos, total.." total", wSys-#total-8,4)
+
+        --Directory
+        local dirs = -1
+        local files = 0
+        for i=1,#items,1 do
+            if items[i][1] == "dir" then
+                dirs = dirs + 1
+            else
+                files = files + 1
+            end
+        end
+        
+        dirs = tostring(dirs)
+        files = tostring(files)
+
+        printf(sysInfos, dirs.." dirs", wSys-#dirs-8,7)
+        printf(sysInfos, files.." files", wSys-#files-8,8)
     end
 
-    --Infos
+    --config's information
     if variable == "infos" or variable == "all" then
         --Date status
         local dateT = "?"
@@ -194,12 +236,26 @@ local function sysInfosGUI(variable) --All informations
         else dateT = "modified" end
         printf(sysInfos, dateT.." date", wSys-7-#dateT,12)
 
-        --Size status
+        --Size
         local sizeSt = "BYTE"
         if numberSize == 0.001 then sizeSt = "KB"
         elseif numberSize == 0.000001 then sizeSt = "MB"
         elseif numberSize == 0.000000001 then sizeSt = "GB" end
-        printf(sysInfos, "size: "..sizeSt, wSys-8-#sizeSt,13)
+        printf(sysInfos, "size: "..sizeSt, wSys-8-#sizeSt,13)     
+
+        --Sort
+        local type
+        if not(sort[2] == 0) then --type
+            type = "TYPE v."..tostring(sort[2])
+        elseif sort[1] == 1 then --from big to small
+            type = "BIG"
+        elseif sort[1] == 2 then -- from small to big
+            type = "SMALL"
+        else --none method
+            type = "NONE"
+        end
+
+        printf(sysInfos, "sort: "..type, wSys-8-#type,9)
         
         --Time
         printf(sysInfos, currentTime, wSys-2-#currentTime,14)
@@ -300,7 +356,29 @@ local function itemHandler(action) --Handles the item list
             path = path .. items[cursor.pos][2] .. "/"
             updateList()
         else --Run's the File
-            shell.run("fg " .. path .. items[cursor.pos][2])
+            cursor.status = 1
+            term.setBackgroundColor(colors.black)
+            term.setTextColor(colors.green)
+            term.setCursorPos(1,h)
+            term.clearLine()
+            printf(term, "How do you want to open the file? (Run/Edit/Cancel)", 1,h)
+            local Qevent, Qkey = os.pullEvent("key")
+            while true do
+                if Qkey == keys.r then
+                    cursor.status = 0
+                    shell.run("fg " .. path .. items[cursor.pos][2])
+                    return
+                elseif Qkey == keys.e then
+                    cursor.status = 0
+                    shell.run("fg edit " .. path .. items[cursor.pos][2])
+                    return
+                elseif Qkey == keys.c then
+                    cursor.status = 0
+                    return
+                else
+                    Qevent, Qkey = os.pullEvent("key")
+                end
+            end
         end
     elseif action == 3 then --Goes into the folder
         for i=1,#path,1 do
@@ -340,15 +418,13 @@ local function itemHandler(action) --Handles the item list
         term.setTextColor(colors.red)
         term.setCursorPos(1,h)
         term.clearLine()
-        printf(term, "Do you want to remove the items? (y/n)", 1,h)
+        printf(term, "Do you want to remove the items? ([Y]/[N])", 1,h)
         local Qevent, Qkey = os.pullEvent("key")
         while true do
             if Qkey == keys.y then
                 cursor.status = 0
                 break
             elseif Qkey == keys.n then
-                term.setCursorPos(1,h)
-                term.clearLine()
                 cursor.status = 0
                 return
             else
@@ -417,15 +493,13 @@ local function itemHandler(action) --Handles the item list
         term.setTextColor(colors.orange)
         term.setCursorPos(1,h)
         term.clearLine()
-        printf(term, "Do you want to Copy the items? (y/n)", 1,h)
+        printf(term, "Do you want to Copy the items? ([y]/[n])", 1,h)
         local Qevent, Qkey = os.pullEvent("key")
         while true do
             if Qkey == keys.y then
                 cursor.status = 0
                 break
             elseif Qkey == keys.n then
-                term.setCursorPos(1,h)
-                term.clearLine()
                 cursor.status = 0
                 return
             else
@@ -459,6 +533,28 @@ local function itemHandler(action) --Handles the item list
         term.setCursorPos(1,h)
         term.clearLine()
         updateList()
+    
+        cursor.status = 1
+        term.setBackgroundColor(colors.black)
+        term.setTextColor(colors.lightBlue)
+        term.setCursorPos(1,h)
+        term.clearLine()
+        printf(term, "Enter a new name for the selected file. (\"*.*\" = Cancel)", 1,h)
+        while true do
+            local finalName
+            local name = io.read()
+            if name == "*.*" then cursor.status = 0 return end
+            if string.sub(name, 1, 1) == "*" then
+                finalName = items[cursor.pos][2]
+            end
+            if string.sub(name, #name, 1) == "*" and not(items[cursor.pos][4][1] == " ?") then
+                finalName = finalName .. "." .. items[cursor.pos][4][1]
+            else
+                finalName = finalName .. string.sub(io.read(), string.find(io.read(), "%."))
+            end
+            printf(term, finalName, 1,h)
+            io.read()
+        end
     end
 
     sysInfosGUI("path")
@@ -469,7 +565,7 @@ end
 --Inputs
 local function keyUserInterface() --Handles all Key Inputs 
     while true do
-        event, key = os.pullEvent( "key" )
+        local event, key = os.pullEvent( "key" )
 
         if selectedWindow == explorer then
             listEnd = hExp-1
@@ -493,12 +589,13 @@ local function keyUserInterface() --Handles all Key Inputs
                 itemHandler(-7)
             elseif key == keys.pageDown then --Moves the cursor to the bottom of the screen
                 itemHandler(7)
-            
             elseif key == keys.insert then --Pastes the items from the clipboard in the current path
                 itemHandler(9)
             elseif keys_down[keys.leftCtrl] or keys_down[keys.rightCtrl] then
                 if key == keys.c then
                     itemHandler(8)
+                elseif keey == keys.v then
+                    itemhandler(9)
                 end
             end
         end
@@ -519,12 +616,47 @@ local function keyboard_shortcuts() --Remembers the keys that are held down.
     return 0
 end
 
+local function mouseUserInterface()
+    while true do
+        local event, button, xPos, yPos = os.pullEvent("mouse_click")
+        if xPos < wSys and yPos > 3 and yPos < h then
+            if selectedWindow == explorer then
+                if yPos < #items-cursor.scroll+4 then
+                    if cursor.pos == yPos-3+cursor.scroll then itemHandler(2)
+                    else
+                        items[cursor.pos][3] = "-"
+                        cursor.pos = yPos-3+cursor.scroll
+                        items[cursor.pos][3] = ">"
+                        itemListGUI()
+                    end
+                end
+            else
+                selectedWindow = explorer
+            end
+        end
+    end
+    return 0
+end
+
+local function scrollUserInterface()
+    while true do
+        local event, scrollWay, xPos, yPos = os.pullEvent("mouse_scroll")
+        if selectedWindow == explorer then
+                if scrollWay == -1 and cursor.pos > 1 or scrollWay == 1 and cursor.pos < #items then
+                    itemHandler(scrollWay)
+                end
+        else
+            selectedWindow = explorer
+        end
+    end
+end
+
 function main()
     updateList()
     itemListGUI()
     sysInfosGUI("all")
     while true do
-        if not(cursor.status == 1) then
+        if not(cursor.status == 1) or not(cursor.status == 2) then
             for i=1,w,1 do
                 term.setBackgroundColor(colors.black)
                 term.setTextColor(colors.gray)
@@ -541,4 +673,4 @@ function main()
     return 0
 end
 
-parallel.waitForAll( main, keyUserInterface, keyboard_shortcuts )
+parallel.waitForAll( main, keyUserInterface, keyboard_shortcuts, mouseUserInterface, scrollUserInterface )
