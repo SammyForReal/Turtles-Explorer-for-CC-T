@@ -20,7 +20,7 @@ Download
 to download the Explorer directly to your ComputerCraft computer, type this in **the interactive Lua prompt**:
 
 ```
-domain = "https://github.com/1Turtle/Turtles-Explorer-for-CC-T/releases/latest/download/explorer.lua"
+domain = "https://raw.githubusercontent.com/1Turtle/Turtles-Explorer-for-CC-T/NotReady/explorer.lua"
 content = http.get(domain).readAll()
 f = fs.open("explorer.lua", "w")
 f.write(content)
