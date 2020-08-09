@@ -7,6 +7,7 @@ local normalItem = { colors.black, colors.cyan }
 
 --Variables
 local clipboard = { } --Selected files/directories
+local fileTypes = { " -", "lua", " ?", "txt", "nfp" } --File type
 local fileTypes = {["lua"]=colors.blue, ["txt"]=colors.white, ["nfp"]=colors.orange, [" ?"]=colors.lightGray, [" -"]=colors.gray, ["DIR"]=colors.purple } --File type
 local currentTime = textutils.formatTime(os.time()) --Time
 local path = "rom/programs/" --Current path
@@ -14,12 +15,12 @@ local cursor = { scroll=0, pos=1, posX=1, posY=1,click=0,status=0,marked=0 } --c
 local items = { } --Current items ([1]=type;[2]=name;[3]=state)
 local keys_down = {} --Keys which are held
 local w, h = term.getSize() --Screen size
-local sort = { 0, 0 } --[0=found order, 1=big, 2=small]=size; [0=none, 1=files, 2=folders, 3=type]=first type;
+local sort = 1 --[0=found order, 1=size, 2=date, 3=type]
 
 --Windows
 local explorer = window.create(term.current(), 1, 4, w-16, h-4, true) --Item List
 local sysInfos = window.create(term.current(), w-15, 4, 17, h-4, true) --System Informations
-local window = window.create(term.current(), w/4, h/4, w/4*2, h/4*2, true) --PopupWindow
+local popupWindow = window.create(term.current(), w/4, h/4, w/4*2, h/4*2, true) --PopupWindow
 local selectedWindow = explorer --Focused window.
 
 --Sizes
@@ -38,6 +39,16 @@ local function round(num) --Rounds numbers up or down
         numR = string.sub(num, 1,4)
     end
     return numR
+end
+
+local function getIndex(array, value)
+    local index = 1
+    for i=1,#array,1 do
+        if array[i] == value then return index end
+        index = index + 1
+    end
+
+    return 0
 end
 
 --GUI
@@ -155,7 +166,7 @@ local function sysInfosGUI(variable) --All informations
         if cursor.status == 0 then
             term.setTextColor(colors.gray)
             term.write(items[cursor.pos][2])
-            if items[cursor.pos][1] == "file" then
+            if items[cursor.pos][1] == "file" and not(items[cursor.pos][4][1] == " ?") then
                 term.write("." .. items[cursor.pos][4][1])
             end
         end
@@ -245,12 +256,12 @@ local function sysInfosGUI(variable) --All informations
 
         --Sort
         local type
-        if not(sort[2] == 0) then --type
-            type = "TYPE v."..tostring(sort[2])
-        elseif sort[1] == 1 then --from big to small
+        if sort == 1 then --from big to small
             type = "BIG"
-        elseif sort[1] == 2 then -- from small to big
+        elseif sort == 2 then -- from small to big
             type = "SMALL"
+        elseif sort == 3 then --type
+            type = "TYPE"
         else --none method
             type = "NONE"
         end
@@ -287,9 +298,9 @@ local function updateList() --Searches for files/directories in the current path
             
             --Size
             size = round(attributes.size*numberSize)
-            if string.sub(name, 1, 1) == "." then --"invisible" file
-                name = string.sub(name, 2)
-            else --Normal file
+
+            --Names 
+            if not(string.sub(name, 1, 1) == ".") then
                 if not (string.find(name, "%.") == nil) then
                     ext = string.sub(name, string.find(name, "%.")+1)
                     name = string.sub(name, 1,string.find(name, "%.")-1)
@@ -302,6 +313,66 @@ local function updateList() --Searches for files/directories in the current path
             items[#items+1] = { "file", name, "-", {ext, size, date} }
         end
     end
+
+    if sort == 1 then
+        table.sort(items,
+            function(a,b)
+                if a[2] == ".." then return true
+                elseif b[2] == ".." then return false
+                elseif fs.isDir(path..a[2]) then return true
+                elseif fs.isDir(path..b[2]) then return false
+                else 
+                    local aT = "." .. a[4][1]
+                    local bT = "." .. b[4][1]
+                    if a[4][1] == " -" then aT = "" end
+                    if b[4][1] == " -" then bT = "" end
+                    return fs.getSize(path..b[2]..bT)<fs.getSize(path..a[2]..aT)
+                end
+            end
+        )
+    elseif sort == 2 then
+        table.sort(items,
+            function(a,b)
+                if a[2] == ".." then return true
+                elseif b[2] == ".." then return false
+                elseif a[4][3] == "--/--/----" then return true
+                elseif b[4][3] == "--/--/----" then return false
+                 end
+
+                local aT = "." .. a[4][1]
+                if a[4][1] == " -" then aT = "" end
+                attributes = fs.attributes(path .. a[2]..aT)
+                if dateType == 1 then date = os.date("*t", attributes.created/1000)
+                else date = os.date("*t", attributes.modification/1000) end
+                dateA = tonumber(date.year .. date.month .. date.day) 
+            
+                local bT = "." .. b[4][1]
+                if b[4][1] == " -" then bT = "" end
+                attributes = fs.attributes(path .. b[2]..bT)
+                if dateType == 1 then date = os.date("*t", attributes.created/1000)
+                else date = os.date("*t", attributes.modification/1000) end
+                dateB = tonumber(date.year .. date.month .. date.day) 
+
+                return dateA<dateB
+            end
+        )
+    
+    elseif sort == 3 then
+        table.sort(items,
+            function(a,b)
+                if a[2] == ".." then return true
+                elseif b[2] == ".." then return false
+                end
+
+                if a[4][1] == " -" then return true
+                elseif b[4][1] == " -" then return false
+                end
+
+                return getIndex(fileTypes, a[4][1])<getIndex(fileTypes, b[4][1])
+            end
+        )
+    end
+
     cursor.pos = 1
     cursor.scroll = 0
     sysInfosGUI("path")
@@ -539,22 +610,6 @@ local function itemHandler(action) --Handles the item list
         term.setTextColor(colors.lightBlue)
         term.setCursorPos(1,h)
         term.clearLine()
-        printf(term, "Enter a new name for the selected file. (\"*.*\" = Cancel)", 1,h)
-        while true do
-            local finalName
-            local name = io.read()
-            if name == "*.*" then cursor.status = 0 return end
-            if string.sub(name, 1, 1) == "*" then
-                finalName = items[cursor.pos][2]
-            end
-            if string.sub(name, #name, 1) == "*" and not(items[cursor.pos][4][1] == " ?") then
-                finalName = finalName .. "." .. items[cursor.pos][4][1]
-            else
-                finalName = finalName .. string.sub(io.read(), string.find(io.read(), "%."))
-            end
-            printf(term, finalName, 1,h)
-            io.read()
-        end
     end
 
     sysInfosGUI("path")
@@ -562,7 +617,7 @@ local function itemHandler(action) --Handles the item list
     return
 end
 
---Inputs
+---- Inputs ----
 local function keyUserInterface() --Handles all Key Inputs 
     while true do
         local event, key = os.pullEvent( "key" )
@@ -651,12 +706,13 @@ local function scrollUserInterface()
     end
 end
 
+---- Main Loop ----
 function main()
     updateList()
     itemListGUI()
     sysInfosGUI("all")
     while true do
-        if not(cursor.status == 1) or not(cursor.status == 2) then
+        if not(cursor.status == 1 or cursor.status == 2) then
             for i=1,w,1 do
                 term.setBackgroundColor(colors.black)
                 term.setTextColor(colors.gray)
