@@ -13,7 +13,7 @@ local cursor = { scroll=0, pos=1, posX=1, posY=1,click=0,status=0,marked=0 } --c
 local items = { } --Current items ([1]=type;[2]=name;[3]=state)
 local keys_down = {} --Keys which are held
 local w, h = term.getSize() --Screen size
-local sort = 3 --[0=found order, 1=size, 2=date, 3=type]
+local sort = 2 --[0=found order, 1=size, 2=date, 3=type]
 
 --Windows
 local explorer = window.create(term.current(), 1, 4, w-16, h-4, true) --Item List
@@ -136,7 +136,8 @@ local function sysInfosGUI(variable)
 
     --Path
     if variable == "path" or variable == nil then 
-        local label = tostring(os.getComputerLabel())
+        local label = "nil"
+        if os.getComputerLabel() then label = os.getComputerLabel() end
 
         --Clear
         term.setBackgroundColor(colors.black)
