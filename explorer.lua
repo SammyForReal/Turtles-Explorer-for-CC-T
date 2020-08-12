@@ -287,9 +287,9 @@ local function sysInfosGUI(variable)
         --Sort
         local type
         if sort == 1 then --from big to small
-            type = "BIG"
+            type = "SIZE"
         elseif sort == 2 then -- from small to big
-            type = "SMALL"
+            type = "DATE"
         elseif sort == 3 then --type
             type = "TYPE"
         else --none method
