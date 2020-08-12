@@ -13,7 +13,7 @@ local cursor = { scroll=0, pos=1, posX=1, posY=1,click=0,status=0,marked=0 } --c
 local items = { } --Current items ([1]=type;[2]=name;[3]=state)
 local keys_down = {} --Keys which are held
 local w, h = term.getSize() --Screen size
-local sort = 2 --[0=found order, 1=size, 2=date, 3=type]
+local sort = 1 --[0=found order, 1=size, 2=date, 3=type]
 
 --Windows
 local explorer = window.create(term.current(), 1, 4, w-16, h-4, true) --Item List
@@ -428,12 +428,12 @@ item.run = function()
 
         if Qkey == keys.r then
             shell.run("fg " .. path .. items[cursor.pos][2])
-            return
+            break
         elseif Qkey == keys.e then
             shell.run("fg edit " .. path .. items[cursor.pos][2])
-            return
+            break
         elseif Qkey == keys.c then
-            return
+            break
         end
     end
 
@@ -479,7 +479,7 @@ item.remove = function()
         if Qkey == keys.y then
             break
         elseif Qkey == keys.n then
-            return
+            break
         else
             Qevent, Qkey = os.pullEvent("key")
         end
