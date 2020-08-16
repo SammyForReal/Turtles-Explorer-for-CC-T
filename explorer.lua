@@ -1,11 +1,24 @@
+--------------------- About Program ---------------------
+local _nVersion = "0.9.2"
+local _sCreator = "1Turtle" --MC-Nickname: Sammy_craft
+---------------------------------------------------------
+
+local tArgs = { ... }
+
+--Error Checking
+if tArgs[1] == "version" or tArgs[1] == "-v" or tArgs[1] == "--version" or tArgs[1] == "-version" then
+    print("Turtles-Explorer v.".._nVersion.." by ".._sCreator)
+    return
+end
+
 ---------------- Variables ----------------
 local fileTypes = { --File types colors
-    ["lua"]=colors.blue,
-    ["txt"]=colors.white,
-    ["nfp"]=colors.orange,
-    [" ?"]=colors.lightGray,
-    [" -"]=colors.gray,
-    ["DIR"]=colors.purple
+    ["lua"] = colors.blue,
+    ["txt"] = colors.white,
+    ["nfp"] = colors.orange,
+    [" ?"]  = colors.lightGray,
+    [" -"]  = colors.gray,
+    ["DIR"] = colors.purple
 }
 local currentTime = textutils.formatTime(os.time()) --Time
 local path = "rom/programs/" --Current path
@@ -13,7 +26,7 @@ local cursor = { scroll=0, pos=1, posX=1, posY=1,click=0,status=0,marked=0 } --c
 local items = { } --Current items ([1]=type;[2]=name;[3]=state)
 local keys_down = {} --Keys which are held
 local w, h = term.getSize() --Screen size
-local sort = 1 --[0=found order, 1=size, 2=date, 3=type]
+local sort = "TYPE" --"NONE", "SIZE", "DATE", "TYPE"
 
 --Windows
 local explorer = window.create(term.current(), 1, 4, w-16, h-4, true) --Item List
@@ -36,33 +49,21 @@ local dateType = date.created
 local function round(num) 
     numR = num + 0.5 - (num + 0.5) % 1
     if numR == 0 then
-        numR = string.sub(num, 1,4)
+        numR = tostring(num):sub(1,4)
     end
-    return numR
+    return tonumber(numR)
 end
-
---Returns the index of an array
-local function getIndex(array, value) 
-    local index = 1
-    for i=1,#array,1 do
-        if array[i] == value then return index end
-        index = index + 1
-    end
-
-    return 0
-end
-
 
 ---------------- TUI ----------------
 --Writes a string to the selected terminal at x,y
 local function printp(form, stringT, x, y, short) 
-    if not (short == nil) then --Shortens the string
+    if short ~= nil then --Shortens the string
         if #stringT > short then
             local removeChars = 2
-            if (#string.sub(stringT, short-2)-1) > 10 then
+            if #stringT:sub(short-2)-1 > 10 then
                 removeChars = 3
             end
-            stringT = string.sub(stringT, 1, short-removeChars) .. "~" .. #string.sub(stringT, short-2)-1
+            stringT = stringT:sub(1, short-removeChars) .. "~" .. #stringT:sub(short-2)-1
         end
     end
 
@@ -73,7 +74,7 @@ end
 --Draws the items of the current folder
 local function itemListGUI() 
     local listEnd = h-4
-    if (h-4)+cursor.scroll > #items then
+    if h-4+cursor.scroll > #items then
         listEnd = #items-cursor.scroll
 
         explorer.setBackgroundColor(colors.black)
@@ -128,7 +129,7 @@ end
 --Writes all important informations
 local function sysInfosGUI(variable) 
     --Clear
-    if variable == nil then 
+    if not( variable ) then 
         sysInfos.setBackgroundColor(colors.black)
         sysInfos.setTextColor(colors.cyan)
         sysInfos.clear()
@@ -147,13 +148,13 @@ local function sysInfosGUI(variable)
 
         --Current Path
         if #path+2 >= w-#label-5 then
-            printp(term, "/" .. string.sub(path, 1, w-#label-10) .. ".../", 1, 2)
+            printp(term, "/" .. path:sub(1, w-#label-10) .. ".../", 1, 2)
         else
             printp(term, "/" .. path, 1, 2)
         end
 
         --Computers Label
-        if not(label == "nil") then
+        if label ~= "nil" then
             term.setCursorPos(w-#label-3, 2)
 
             term.setTextColor(colors.yellow)
@@ -172,7 +173,7 @@ local function sysInfosGUI(variable)
         if cursor.status == 0 then
             term.setTextColor(colors.gray)
             term.write(items[cursor.pos][2])
-            if items[cursor.pos][1] == "file" and not(items[cursor.pos][4][1] == " ?") then
+            if items[cursor.pos][1] == "file" and (items[cursor.pos][4][1] ~= " ?") then
                 term.write("." .. items[cursor.pos][4][1])
             end
         end
@@ -189,7 +190,7 @@ local function sysInfosGUI(variable)
     end
 
     --Category
-    if variable == nil then
+    if not( variable ) then
         term.setBackgroundColor(colors.cyan)
         term.setTextColor(colors.white)
         term.setCursorPos(1,3)
@@ -228,7 +229,7 @@ local function sysInfosGUI(variable)
     end
 
     --Values
-    if variable == "values" or variable == nil then 
+    if variable == "values" or not( variable ) then 
         --Disk-space
         local free = tostring( round(fs.getFreeSpace("/")*numberSize) )
         local used = tostring( round((fs.getCapacity("/")-fs.getFreeSpace("/"))*numberSize) )
@@ -270,7 +271,7 @@ local function sysInfosGUI(variable)
     end
 
     --config's information
-    if variable == "infos" or variable == nil then
+    if variable == "infos" or not( variable ) then
         --Date status
         local dateT = "?"
         if dateType == 1 then dateT = "create"
@@ -285,18 +286,7 @@ local function sysInfosGUI(variable)
         printp(sysInfos, "size: "..sizeSt, wSys-8-#sizeSt,12)     
 
         --Sort
-        local type
-        if sort == 1 then --from big to small
-            type = "SIZE"
-        elseif sort == 2 then -- from small to big
-            type = "DATE"
-        elseif sort == 3 then --type
-            type = "TYPE"
-        else --none method
-            type = "NONE"
-        end
-
-        printp(sysInfos, "sort: "..type, wSys-8-#type,13)
+        printp(sysInfos, "sort: "..sort, wSys-8-#sort,13)
         
         --Time
         printp(sysInfos, currentTime, wSys-2-#currentTime,14)
@@ -323,18 +313,21 @@ local function updateList()
         else --FILE
             --Date
             attributes = fs.attributes(path .. foundItems[i])
-            if dateType == 1 then date = os.date("*t", attributes.created/1000)
-            else date = os.date("*t", attributes.modification/1000) end
+            if dateType == 1 then
+                date = os.date("*t", attributes.created/1000)
+            else
+                date = os.date("*t", attributes.modification/1000)
+            end
             date = date.month .. "/" .. date.day .. "/" .. date.year
             
             --Size
             size = round(attributes.size*numberSize)
 
             --Names 
-            if not(string.sub(name, 1, 1) == ".") then
-                if not (string.find(name, "%.") == nil) then
-                    ext = string.sub(name, string.find(name, "%.")+1)
-                    name = string.sub(name, 1,string.find(name, "%.")-1)
+            if name:sub(1, 1) ~= "." then
+                if name:find("%.") ~= nil then
+                    ext = name:sub(name:find("%.")+1)
+                    name = name:sub(1, name:find("%.")-1)
                 else
                     name = name
                 end
@@ -345,7 +338,7 @@ local function updateList()
         end
     end
 
-    if sort == 1 then
+    if sort == "SIZE" then
         table.sort(items,
             function(a,b)
                 if a[2] == ".." then return true
@@ -361,7 +354,7 @@ local function updateList()
                 end
             end
         )
-    elseif sort == 2 then
+    elseif sort == "DATE" then
         table.sort(items,
             function(a,b)
                 if a[2] == ".." then return true
@@ -388,7 +381,7 @@ local function updateList()
             end
         )
     
-    elseif sort == 3 then
+    elseif sort == "TYPE" then
         table.sort(items,
             function(a,b)
                 if a[2] == ".." then return true
@@ -399,7 +392,7 @@ local function updateList()
                 elseif b[4][1] == " -" then return false
                 end
 
-                return getIndex(fileTypes, a[4][1])<getIndex(fileTypes, b[4][1])
+                return tonumber(fileTypes[a[4][1]]) < tonumber(fileTypes[b[4][1]])
             end
         )
     end
@@ -442,8 +435,8 @@ end
 
 item.back = function() 
     for i=1,#path,1 do
-        if string.sub(path, #path-i, -i-1) == "/" or string.sub(path, #path-i, -i-1) == "" then
-            path = string.sub(path, 1, -i-1)
+        if path:sub(#path-i, -i-1) == "/" or path:sub(#path-i, -i-1) == "" then
+            path = path:sub(1, -i-1)
             break
         end
     end
@@ -486,7 +479,7 @@ item.remove = function()
     end
 
     for i=#items,1,-1 do
-        if items[i][3] == "+" or items[i][3] == ">" and not (items[i][2] == "..") then
+        if items[i][3] == "+" or items[i][3] == ">" and (items[i][2] ~= "..") then
             term.setCursorPos(1,h)
             term.clearLine()
             term.setBackgroundColor(colors.black)
@@ -494,9 +487,9 @@ item.remove = function()
 
             if items[i][1] == "dir" then
                 if fs.isReadOnly("/" .. path .. items[i][2]) then
-                    printp(term, string.format("folder %s cannot be deleted!", items[i][2]), 1,h)
+                    printp(term, ("folder %s cannot be deleted!"):format(items[i][2]), 1,h)
                 else
-                    printp(term, string.format("Remove item %s", items[i][2]), 1,h)
+                    printp(term, ("Remove item %s"):format(items[i][2]), 1,h)
                     fs.delete("/" .. path .. items[i][2])
 
                     table.remove(items, i)
@@ -504,9 +497,9 @@ item.remove = function()
                 end
             else
                 if fs.isReadOnly("/" .. path .. items[i][2] .. "." .. items[i][4][1]) then
-                    printp(term, string.format("file %s cannot be deleted!", items[i][2]), 1,h)
+                    printp(term, ("file %s cannot be deleted!"):format(items[i][2]), 1,h)
                 else
-                    printp(term, string.format("Remove item %s", items[i][2] .. "." .. items[i][4][1]), 1,h)
+                    printp(term, ("Remove item %s"):format(items[i][2] .. "." .. items[i][4][1]), 1,h)
                     fs.delete("/" .. path .. items[i][2] .. "." .. items[i][4][1])
 
                     table.remove(items, i)
@@ -528,7 +521,7 @@ end
 item.copy = function() 
     clipboard = { }
     for i=1,#items,1 do
-        if items[i][3] == "+" or items[i][3] == ">" and not(items[i][2] == "..") then
+        if items[i][3] == "+" or items[i][3] == ">" and items[i][2] ~= ".." then
             if items[i][1] == "dir" then
                 clipboard[#clipboard+1] = { "/" .. path, items[i][2], "" }
             else
@@ -558,10 +551,11 @@ item.paste = function()
         end
     end
 
+    if not( clipboard ) then clipboard = "" end
     for i=1,#clipboard,1 do
         local fileName = clipboard[#clipboard][2]
-        if not(string.find(clipboard[#clipboard][2], "%(") == nil) then
-            fileName = string.sub(clipboard[#clipboard][2], 1, string.find(clipboard[#clipboard][2], "%(")-1)
+        if clipboard[#clipboard][2]:find("%(") ~= nil then
+            fileName = clipboard[#clipboard][2]:sub(1, clipboard[#clipboard][2]:find("%(")-1)
         end
         local name = "/" .. path .. fileName .. clipboard[#clipboard][3]
         local j = 1
@@ -582,7 +576,7 @@ item.paste = function()
             
             break
         else
-            printp(term, string.format("Copy items %s/%s (%s)", i, #clipboard, fileName .. clipboard[#clipboard][3]), 1,h)
+            printp(term, ("Copy items %s/%s (%s)"):format(i, #clipboard, fileName .. clipboard[#clipboard][3]), 1,h)
 
             fs.copy( clipboard[#clipboard][1] ..  clipboard[#clipboard][2] .. clipboard[#clipboard][3], name)
         end
@@ -801,7 +795,7 @@ function main()
     itemListGUI()
     sysInfosGUI()
     while not(finishNormally) do
-        if not(cursor.status == 1 or cursor.status == 2) then
+        if cursor.status ~= 1 then
             for i=1,w,1 do
                 term.setBackgroundColor(colors.black)
                 term.setTextColor(colors.gray)
@@ -809,7 +803,7 @@ function main()
             end
         end
 
-        if not(textutils.formatTime(os.time()) == currentTime) then
+        if textutils.formatTime(os.time()) ~= currentTime then
             currentTime = textutils.formatTime(os.time())
             sysInfosGUI("infos")
         end
