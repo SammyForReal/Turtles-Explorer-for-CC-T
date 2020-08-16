@@ -54,6 +54,7 @@ local function round(num)
     return tonumber(numR)
 end
 
+
 ---------------- TUI ----------------
 --Writes a string to the selected terminal at x,y
 local function printp(form, stringT, x, y, short) 
@@ -186,7 +187,7 @@ local function sysInfosGUI(variable)
         term.clearLine()
 
         term.setTextColor(colors.white)
-        printp(term, "X", w,1)
+        printp(term, "\215", w,1)
     end
 
     --Category
@@ -403,8 +404,9 @@ local function updateList()
     return
 end
 
+
 ---------------- Item handler ----------------
-local item = { ["run"]=nil, ["back"]=nil, ["enter"]=nil, ["remove"]=nil, ["copy"]=nil }
+local item = { }
 
 item.run = function() 
     cursor.status = 1
@@ -416,14 +418,17 @@ item.run = function()
 
     printp(term, "How do you want to open the file? (Run/Edit/Cancel)", 1,h)
 
+    local ext = "."..items[cursor.pos][4][1]
+    if ext == ". -" then ext = "" end
+
     while true do
         local Qevent, Qkey = os.pullEvent("key")
 
         if Qkey == keys.r then
-            shell.run("fg " .. path .. items[cursor.pos][2])
+            shell.run("fg " .. path .. items[cursor.pos][2] .. ext)
             break
         elseif Qkey == keys.e then
-            shell.run("fg edit " .. path .. items[cursor.pos][2])
+            shell.run("fg edit " .. path .. items[cursor.pos][2] .. ext)
             break
         elseif Qkey == keys.c then
             break
