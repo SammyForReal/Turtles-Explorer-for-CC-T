@@ -18,12 +18,8 @@ Download
 --------
 > 👉Note: the explorer is only for [CC:T](https://github.com/SquidDev-CC/CC-Tweaked) and is not tested on other versions of ComputerCraft
 
-to download the Explorer directly to your ComputerCraft computer, type this in **the interactive Lua prompt**:
+to download the Explorer directly to your ComputerCraft computer, run the following program:
 
 ```
-domain = "https://raw.githubusercontent.com/1Turtle/Turtles-Explorer-for-CC-T/NotReady/explorer.lua"
-content = http.get(domain).readAll()
-f = fs.open("explorer.lua", "w")
-f.write(content)
-f.close()
+> wget https://raw.githubusercontent.com/1Turtle/Turtles-Explorer-for-CC-T/NotReady/explorer.lua
 ```
